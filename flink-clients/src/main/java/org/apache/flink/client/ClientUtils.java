@@ -19,22 +19,20 @@
 package org.apache.flink.client;
 
 import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.JobSubmissionResult;
 import org.apache.flink.client.cli.ExecutionConfigAccessor;
+import org.apache.flink.client.deployment.executors.JobClientImpl;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.ContextEnvironment;
 import org.apache.flink.client.program.ContextEnvironmentFactory;
-import org.apache.flink.client.program.DetachedJobExecutionResult;
 import org.apache.flink.client.program.PackagedProgram;
 import org.apache.flink.client.program.ProgramInvocationException;
 import org.apache.flink.client.program.ProgramMissingJobException;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.CoreOptions;
-import org.apache.flink.runtime.client.JobExecutionException;
+import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.execution.librarycache.FlinkUserCodeClassLoaders;
 import org.apache.flink.runtime.jobgraph.JobGraph;
-import org.apache.flink.runtime.jobmaster.JobResult;
 import org.apache.flink.util.ExceptionUtils;
 
 import org.slf4j.Logger;
@@ -101,22 +99,18 @@ public enum ClientUtils {
 		return FlinkUserCodeClassLoaders.create(resolveOrder, urls, parent, alwaysParentFirstLoaderPatterns);
 	}
 
-	public static CompletableFuture<JobID> submitJobAndGetJobID(ClusterClient<?> client, JobGraph jobGraph) {
+	public static CompletableFuture<JobClient> submitJobAndGetJobClient(ClusterClient<?> client, JobGraph jobGraph) {
 		return checkNotNull(client)
 				.submitJob(checkNotNull(jobGraph))
-				.thenApply(JobSubmissionResult::getJobID);
-	}
-
-	public static CompletableFuture<JobResult> submitJobAndGetResult(ClusterClient<?> client, JobGraph jobGraph) {
-		return submitJobAndGetJobID(client, jobGraph)
-				.thenCompose(client::requestJobResult);
+				.thenApply(JobSubmissionResult::getJobID)
+				.thenApply(jobID -> new JobClientImpl<>(client, jobID));
 	}
 
 	public static JobExecutionResult submitJob(ClusterClient<?> client, JobGraph jobGraph) throws ProgramInvocationException {
 		try {
-			return submitJobAndGetJobID(client, jobGraph)
-				.thenApply(DetachedJobExecutionResult::new)
-				.get();
+			return submitJobAndGetJobClient(client, jobGraph)
+					.thenCompose(JobClient::getJobSubmissionResult)
+					.get();
 		} catch (InterruptedException | ExecutionException e) {
 			ExceptionUtils.checkInterrupted(e);
 			throw new ProgramInvocationException("Could not run job in detached mode.", jobGraph.getJobID(), e);
@@ -129,17 +123,17 @@ public enum ClientUtils {
 			ClassLoader classLoader) throws ProgramInvocationException {
 		checkNotNull(classLoader);
 
-		JobResult jobResult;
+		JobClient jobClient;
 		try {
-			jobResult = submitJobAndGetResult(client, jobGraph).get();
+			jobClient = submitJobAndGetJobClient(client, jobGraph).get();
 		} catch (InterruptedException | ExecutionException e) {
 			ExceptionUtils.checkInterrupted(e);
 			throw new ProgramInvocationException("Could not run job", jobGraph.getJobID(), e);
 		}
 
 		try {
-			return jobResult.toJobExecutionResult(classLoader);
-		} catch (JobExecutionException | IOException | ClassNotFoundException e) {
+			return jobClient.getJobExecutionResult(classLoader).get();
+		} catch (Exception e) {
 			throw new ProgramInvocationException("Job failed", jobGraph.getJobID(), e);
 		}
 	}

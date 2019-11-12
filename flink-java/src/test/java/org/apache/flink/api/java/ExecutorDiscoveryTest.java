@@ -25,13 +25,17 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.DeploymentOptions;
 import org.apache.flink.core.execution.Executor;
 import org.apache.flink.core.execution.ExecutorFactory;
+import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.util.OptionalFailure;
 
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -46,6 +50,7 @@ public class ExecutorDiscoveryTest {
 	public void correctExecutorShouldBeInstantiatedBasedOnConfigurationOption() throws Exception {
 		final Configuration configuration = new Configuration();
 		configuration.set(DeploymentOptions.TARGET, IDReportingExecutorFactory.ID);
+		configuration.set(DeploymentOptions.ATTACHED, true);
 
 		final JobExecutionResult result = executeTestJobBasedOnConfig(configuration);
 
@@ -78,7 +83,19 @@ public class ExecutorDiscoveryTest {
 			return (pipeline, executionConfig) -> {
 				final Map<String, OptionalFailure<Object>> res = new HashMap<>();
 				res.put(DeploymentOptions.TARGET.key(), OptionalFailure.of(ID));
-				return new JobExecutionResult(new JobID(), 12L, res);
+
+				return CompletableFuture.completedFuture(new JobClient(){
+
+					@Override
+					public CompletableFuture<JobExecutionResult> getJobSubmissionResult() {
+						throw new UnsupportedOperationException();
+					}
+
+					@Override
+					public CompletableFuture<JobExecutionResult> getJobExecutionResult(@Nonnull ClassLoader userClassloader) {
+						return CompletableFuture.completedFuture(new JobExecutionResult(new JobID(), 12L, res));
+					}
+				});
 			};
 		}
 	}

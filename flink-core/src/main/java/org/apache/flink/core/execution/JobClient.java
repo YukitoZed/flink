@@ -18,23 +18,20 @@
 
 package org.apache.flink.core.execution;
 
+import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.dag.Pipeline;
-import org.apache.flink.configuration.Configuration;
+
+import javax.annotation.Nonnull;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
- * The entity responsible for executing a {@link Pipeline}, i.e. a user job.
+ * A client that is scoped to a specific job.
  */
-public interface Executor {
+@PublicEvolving
+public interface JobClient {
 
-	/**
-	 * Executes a {@link Pipeline} based on the provided configuration.
-	 *
-	 * @param pipeline the {@link Pipeline} to execute
-	 * @param configuration the {@link Configuration} with the required execution parameters
-	 * @return the {@link JobExecutionResult} corresponding to the pipeline execution.
-	 */
-	CompletableFuture<JobClient> execute(Pipeline pipeline, Configuration configuration) throws Exception;
+	CompletableFuture<JobExecutionResult> getJobSubmissionResult();
+
+	CompletableFuture<JobExecutionResult> getJobExecutionResult(@Nonnull final ClassLoader userClassloader);
 }
