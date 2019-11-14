@@ -67,12 +67,12 @@ public class DefaultExecutorServiceLoader implements ExecutorServiceLoader {
 		}
 
 		if (compatibleFactories.size() > 1) {
-			final List<String> configStr =
+			final String configStr =
 					configuration.toMap().entrySet().stream()
 							.map(e -> e.getKey() + "=" + e.getValue())
-							.collect(Collectors.toList());
+							.collect(Collectors.joining("\n"));
 
-			throw new IllegalStateException("Multiple compatible client factories found for:\n" + String.join("\n", configStr) + ".");
+			throw new IllegalStateException("Multiple compatible client factories found for:\n" + configStr + ".");
 		}
 
 		return compatibleFactories.isEmpty() ? null : compatibleFactories.get(0);

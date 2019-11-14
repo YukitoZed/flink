@@ -29,6 +29,7 @@ public interface Executor {
 
 	/**
 	 * Executes a {@link Pipeline} based on the provided configuration.
+	 *
 	 * @param pipeline the {@link Pipeline} to execute
 	 * @param configuration the {@link Configuration} with the required execution parameters
 	 * @return the {@link JobExecutionResult} corresponding to the pipeline execution.
