@@ -16,42 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.flink.client.deployment.executors;
+package org.apache.flink.yarn.executors;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.client.deployment.ClusterClientServiceLoader;
-import org.apache.flink.client.deployment.DefaultClusterClientServiceLoader;
-import org.apache.flink.configuration.ClusterMode;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.DeploymentOptions;
 import org.apache.flink.core.execution.Executor;
 import org.apache.flink.core.execution.ExecutorFactory;
 
-import static org.apache.flink.util.Preconditions.checkNotNull;
-
 /**
- * An {@link ExecutorFactory} for executing jobs on an existing (session) cluster.
+ * An {@link ExecutorFactory} for executing jobs on dedicated (per-job) clusters.
  */
 @Internal
-public class SessionClusterExecutorFactory implements ExecutorFactory {
-
-	private final ClusterClientServiceLoader clusterClientServiceLoader;
-
-	public SessionClusterExecutorFactory() {
-		this(new DefaultClusterClientServiceLoader());
-	}
-
-	public SessionClusterExecutorFactory(final ClusterClientServiceLoader clusterClientServiceLoader) {
-		this.clusterClientServiceLoader = checkNotNull(clusterClientServiceLoader);
-	}
+public class YarnJobClusterExecutorFactory implements ExecutorFactory {
 
 	@Override
 	public boolean isCompatibleWith(Configuration configuration) {
-		return configuration.get(DeploymentOptions.CLUSTER_MODE).equals(ClusterMode.SESSION);
+		return configuration.get(DeploymentOptions.TARGET).equalsIgnoreCase(YarnJobClusterExecutor.NAME);
 	}
 
 	@Override
 	public Executor getExecutor(Configuration configuration) {
-		return new SessionClusterExecutor<>(clusterClientServiceLoader);
+		return new YarnJobClusterExecutor();
 	}
 }

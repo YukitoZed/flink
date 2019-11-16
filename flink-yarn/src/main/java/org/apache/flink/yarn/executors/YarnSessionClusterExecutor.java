@@ -16,20 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.flink.client.deployment.executors;
+package org.apache.flink.yarn.executors;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.dag.Pipeline;
 import org.apache.flink.client.ClientUtils;
 import org.apache.flink.client.FlinkPipelineTranslationUtil;
 import org.apache.flink.client.cli.ExecutionConfigAccessor;
-import org.apache.flink.client.deployment.ClusterClientFactory;
-import org.apache.flink.client.deployment.ClusterClientServiceLoader;
-import org.apache.flink.client.deployment.ClusterDescriptor;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.Executor;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.yarn.YarnClusterClientFactory;
+import org.apache.flink.yarn.YarnClusterDescriptor;
+
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 import java.net.URL;
 import java.util.List;
@@ -41,12 +43,15 @@ import static org.apache.flink.util.Preconditions.checkState;
 /**
  * The {@link Executor} to be used when executing a job on an already running cluster.
  */
-public class SessionClusterExecutor<ClusterID> implements Executor {
+@Internal
+public class YarnSessionClusterExecutor implements Executor {
 
-	private final ClusterClientServiceLoader clusterClientServiceLoader;
+	public static final String NAME = "yarn-session-cluster";
 
-	public SessionClusterExecutor(final ClusterClientServiceLoader clusterClientServiceLoader) {
-		this.clusterClientServiceLoader = checkNotNull(clusterClientServiceLoader);
+	private final YarnClusterClientFactory clusterClientFactory;
+
+	public YarnSessionClusterExecutor() {
+		this.clusterClientFactory = new YarnClusterClientFactory();
 	}
 
 	@Override
@@ -58,13 +63,11 @@ public class SessionClusterExecutor<ClusterID> implements Executor {
 
 		final JobGraph jobGraph = getJobGraph(pipeline, configuration, classpaths, dependencies);
 
-		final ClusterClientFactory<ClusterID> clusterClientFactory = clusterClientServiceLoader.getClusterClientFactory(configuration);
-
-		try (final ClusterDescriptor<ClusterID> clusterDescriptor = clusterClientFactory.createClusterDescriptor(configuration)) {
-			final ClusterID clusterID = clusterClientFactory.getClusterId(configuration);
+		try (final YarnClusterDescriptor clusterDescriptor = clusterClientFactory.createClusterDescriptor(configuration)) {
+			final ApplicationId clusterID = clusterClientFactory.getClusterId(configuration);
 			checkState(clusterID != null);
 
-			try (final ClusterClient<ClusterID> clusterClient = clusterDescriptor.retrieve(clusterID)) {
+			try (final ClusterClient<ApplicationId> clusterClient = clusterDescriptor.retrieve(clusterID)) {
 				return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
 			}
 		}

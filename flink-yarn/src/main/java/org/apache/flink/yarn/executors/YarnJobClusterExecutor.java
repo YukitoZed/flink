@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.client.deployment.executors;
+package org.apache.flink.yarn.executors;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.dag.Pipeline;
 import org.apache.flink.client.FlinkPipelineTranslationUtil;
 import org.apache.flink.client.cli.ExecutionConfigAccessor;
-import org.apache.flink.client.deployment.ClusterClientFactory;
-import org.apache.flink.client.deployment.ClusterClientServiceLoader;
-import org.apache.flink.client.deployment.ClusterDescriptor;
 import org.apache.flink.client.deployment.ClusterSpecification;
+import org.apache.flink.client.deployment.executors.JobClientImpl;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.Executor;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.yarn.YarnClusterClientFactory;
+import org.apache.flink.yarn.YarnClusterDescriptor;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,21 +47,23 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * This executor will start a cluster specifically for the job at hand and
  * tear it down when the job is finished either successfully or due to an error.
  */
-public class JobClusterExecutor<ClusterID> implements Executor {
+@Internal
+public class YarnJobClusterExecutor implements Executor {
 
-	private static final Logger LOG = LoggerFactory.getLogger(JobClusterExecutor.class);
+	private static final Logger LOG = LoggerFactory.getLogger(YarnJobClusterExecutor.class);
 
-	private final ClusterClientServiceLoader clusterClientServiceLoader;
+	public static final String NAME = "yarn-job-cluster";
 
-	public JobClusterExecutor(final ClusterClientServiceLoader clusterClientServiceLoader) {
-		this.clusterClientServiceLoader = checkNotNull(clusterClientServiceLoader);
+	private final YarnClusterClientFactory clusterClientFactory;
+
+	public YarnJobClusterExecutor() {
+		this.clusterClientFactory = new YarnClusterClientFactory();
 	}
 
 	@Override
 	public CompletableFuture<JobClient> execute(Pipeline pipeline, Configuration executionConfig) throws Exception {
-		final ClusterClientFactory<ClusterID> clusterClientFactory = clusterClientServiceLoader.getClusterClientFactory(executionConfig);
 
-		try (final ClusterDescriptor<ClusterID> clusterDescriptor = clusterClientFactory.createClusterDescriptor(executionConfig)) {
+		try (final YarnClusterDescriptor clusterDescriptor = clusterClientFactory.createClusterDescriptor(executionConfig)) {
 			final ExecutionConfigAccessor configAccessor = ExecutionConfigAccessor.fromConfiguration(executionConfig);
 
 			final List<URL> dependencies = configAccessor.getJars();
@@ -69,7 +73,7 @@ public class JobClusterExecutor<ClusterID> implements Executor {
 
 			final ClusterSpecification clusterSpecification = clusterClientFactory.getClusterSpecification(executionConfig);
 
-			try (final ClusterClient<ClusterID> client = clusterDescriptor.deployJobCluster(clusterSpecification, jobGraph, configAccessor.getDetachedMode())) {
+			try (final ClusterClient<ApplicationId> client = clusterDescriptor.deployJobCluster(clusterSpecification, jobGraph, configAccessor.getDetachedMode())) {
 				LOG.info("Job has been submitted with JobID " + jobGraph.getJobID());
 				return CompletableFuture.completedFuture(new JobClientImpl<>(client, jobGraph.getJobID()));
 			}
