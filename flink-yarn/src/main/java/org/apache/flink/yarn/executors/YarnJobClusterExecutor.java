@@ -73,10 +73,9 @@ public class YarnJobClusterExecutor implements Executor {
 
 			final ClusterSpecification clusterSpecification = clusterClientFactory.getClusterSpecification(executionConfig);
 
-			try (final ClusterClient<ApplicationId> client = clusterDescriptor.deployJobCluster(clusterSpecification, jobGraph, configAccessor.getDetachedMode())) {
-				LOG.info("Job has been submitted with JobID " + jobGraph.getJobID());
-				return CompletableFuture.completedFuture(new JobClientImpl<>(client, jobGraph.getJobID()));
-			}
+			final ClusterClient<ApplicationId> client = clusterDescriptor.deployJobCluster(clusterSpecification, jobGraph, configAccessor.getDetachedMode());
+			LOG.info("Job has been submitted with JobID " + jobGraph.getJobID());
+			return CompletableFuture.completedFuture(new JobClientImpl<>(client, jobGraph.getJobID()));
 		}
 	}
 

@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * A client that is scoped to a specific job.
  */
 @PublicEvolving
-public interface JobClient {
+public interface JobClient extends AutoCloseable {
 
 	CompletableFuture<JobExecutionResult> getJobSubmissionResult();
 

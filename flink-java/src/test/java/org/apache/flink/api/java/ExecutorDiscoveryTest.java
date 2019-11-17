@@ -95,6 +95,11 @@ public class ExecutorDiscoveryTest {
 					public CompletableFuture<JobExecutionResult> getJobExecutionResult(@Nonnull ClassLoader userClassloader) {
 						return CompletableFuture.completedFuture(new JobExecutionResult(new JobID(), 12L, res));
 					}
+
+					@Override
+					public void close() {
+
+					}
 				});
 			};
 		}

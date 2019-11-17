@@ -79,4 +79,9 @@ public class JobClientImpl<ClusterID> implements JobClient {
 		}));
 		return res;
 	}
+
+	@Override
+	public void close() throws Exception {
+		this.clusterClient.close();
+	}
 }

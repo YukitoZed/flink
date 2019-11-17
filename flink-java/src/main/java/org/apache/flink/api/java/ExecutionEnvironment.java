@@ -805,12 +805,13 @@ public class ExecutionEnvironment {
 
 		final Executor executor = executorFactory.getExecutor(configuration);
 
-		final JobClient jobClient = executor.execute(plan, configuration).get();
-		lastJobExecutionResult = configuration.getBoolean(DeploymentOptions.ATTACHED)
-				? jobClient.getJobExecutionResult(userClassloader).get()
-				: jobClient.getJobSubmissionResult().get();
+		try (final JobClient jobClient = executor.execute(plan, configuration).get()) {
+			lastJobExecutionResult = configuration.getBoolean(DeploymentOptions.ATTACHED)
+					? jobClient.getJobExecutionResult(userClassloader).get()
+					: jobClient.getJobSubmissionResult().get();
 
-		return lastJobExecutionResult;
+			return lastJobExecutionResult;
+		}
 	}
 
 	private void consolidateParallelismDefinitionsInConfiguration() {

@@ -1562,10 +1562,11 @@ public class StreamExecutionEnvironment {
 				executorServiceLoader.getExecutorFactory(configuration);
 
 		final Executor executor = executorFactory.getExecutor(configuration);
-		final JobClient jobClient = executor.execute(streamGraph, configuration).get();
-		return configuration.getBoolean(DeploymentOptions.ATTACHED)
-				? jobClient.getJobExecutionResult(userClassloader).get()
-				: jobClient.getJobSubmissionResult().get();
+		try (final JobClient jobClient = executor.execute(streamGraph, configuration).get()) {
+			return configuration.getBoolean(DeploymentOptions.ATTACHED)
+					? jobClient.getJobExecutionResult(userClassloader).get()
+					: jobClient.getJobSubmissionResult().get();
+		}
 	}
 
 	private void consolidateParallelismDefinitionsInConfiguration() {

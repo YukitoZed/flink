@@ -66,9 +66,8 @@ public class StandaloneSessionClusterExecutor implements Executor {
 			final StandaloneClusterId clusterID = clusterClientFactory.getClusterId(configuration);
 			checkState(clusterID != null);
 
-			try (final RestClusterClient<StandaloneClusterId> clusterClient = clusterDescriptor.retrieve(clusterID)) {
-				return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
-			}
+			final RestClusterClient<StandaloneClusterId> clusterClient = clusterDescriptor.retrieve(clusterID);
+			return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
 		}
 	}
 

@@ -33,8 +33,6 @@ import org.apache.flink.yarn.YarnClusterDescriptor;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-import java.net.URL;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -56,40 +54,31 @@ public class YarnSessionClusterExecutor implements Executor {
 
 	@Override
 	public CompletableFuture<JobClient> execute(final Pipeline pipeline, final Configuration configuration) throws Exception {
-		final ExecutionConfigAccessor configAccessor = ExecutionConfigAccessor.fromConfiguration(configuration);
-
-		final List<URL> dependencies = configAccessor.getJars();
-		final List<URL> classpaths = configAccessor.getClasspaths();
-
-		final JobGraph jobGraph = getJobGraph(pipeline, configuration, classpaths, dependencies);
+		final JobGraph jobGraph = getJobGraph(pipeline, configuration);
 
 		try (final YarnClusterDescriptor clusterDescriptor = clusterClientFactory.createClusterDescriptor(configuration)) {
 			final ApplicationId clusterID = clusterClientFactory.getClusterId(configuration);
 			checkState(clusterID != null);
 
-			try (final ClusterClient<ApplicationId> clusterClient = clusterDescriptor.retrieve(clusterID)) {
-				return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
-			}
+			// TODO: 17.11.19 we cannot close the client here because we simply have a future of the client
+			final ClusterClient<ApplicationId> clusterClient = clusterDescriptor.retrieve(clusterID);
+			return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
 		}
 	}
 
 	private JobGraph getJobGraph(
 			final Pipeline pipeline,
-			final Configuration configuration,
-			final List<URL> classpaths,
-			final List<URL> libraries) {
+			final Configuration configuration) {
 
 		checkNotNull(pipeline);
 		checkNotNull(configuration);
-		checkNotNull(classpaths);
-		checkNotNull(libraries);
 
 		final ExecutionConfigAccessor executionConfigAccessor = ExecutionConfigAccessor.fromConfiguration(configuration);
 		final JobGraph jobGraph = FlinkPipelineTranslationUtil
 				.getJobGraph(pipeline, configuration, executionConfigAccessor.getParallelism());
 
-		jobGraph.addJars(libraries);
-		jobGraph.setClasspaths(classpaths);
+		jobGraph.addJars(executionConfigAccessor.getJars());
+		jobGraph.setClasspaths(executionConfigAccessor.getClasspaths());
 		jobGraph.setSavepointRestoreSettings(executionConfigAccessor.getSavepointRestoreSettings());
 
 		return jobGraph;
