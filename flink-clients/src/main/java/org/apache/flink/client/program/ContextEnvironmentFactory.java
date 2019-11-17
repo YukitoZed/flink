@@ -24,6 +24,7 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.ExecutionEnvironmentFactory;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.DeploymentOptions;
+import org.apache.flink.core.execution.ExecutorServiceLoader;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,9 +37,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  */
 public class ContextEnvironmentFactory implements ExecutionEnvironmentFactory {
 
-	private final Configuration configuration;
+	private final ExecutorServiceLoader executorServiceLoader;
 
-	private final ClusterClient<?> client;
+	private final Configuration configuration;
 
 	private final ClassLoader userCodeClassLoader;
 
@@ -47,13 +48,12 @@ public class ContextEnvironmentFactory implements ExecutionEnvironmentFactory {
 	private boolean alreadyCalled;
 
 	public ContextEnvironmentFactory(
+			final ExecutorServiceLoader executorServiceLoader,
 			final Configuration configuration,
-			final ClusterClient<?> client,
 			final ClassLoader userCodeClassLoader,
 			final AtomicReference<JobExecutionResult> jobExecutionResult) {
-
+		this.executorServiceLoader = checkNotNull(executorServiceLoader);
 		this.configuration = checkNotNull(configuration);
-		this.client = checkNotNull(client);
 		this.userCodeClassLoader = checkNotNull(userCodeClassLoader);
 		this.jobExecutionResult = checkNotNull(jobExecutionResult);
 		this.alreadyCalled = false;
@@ -63,10 +63,10 @@ public class ContextEnvironmentFactory implements ExecutionEnvironmentFactory {
 	public ExecutionEnvironment createExecutionEnvironment() {
 		verifyCreateIsCalledOnceWhenInDetachedMode();
 		return new ContextEnvironment(
-			configuration,
-			client,
-			userCodeClassLoader,
-			jobExecutionResult);
+				executorServiceLoader,
+				configuration,
+				userCodeClassLoader,
+				jobExecutionResult);
 	}
 
 	private void verifyCreateIsCalledOnceWhenInDetachedMode() {
