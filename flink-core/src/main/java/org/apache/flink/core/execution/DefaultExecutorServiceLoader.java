@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
- * todo make it singleton
  * The default implementation of the {@link ExecutorServiceLoader}. This implementation uses
  * Java service discovery to find the available {@link ExecutorFactory executor factories}.
+ * MAKE IT A SINGLETON.
  */
 public class DefaultExecutorServiceLoader implements ExecutorServiceLoader {
 
