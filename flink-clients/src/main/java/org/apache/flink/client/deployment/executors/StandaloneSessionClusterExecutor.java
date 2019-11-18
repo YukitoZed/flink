@@ -19,77 +19,20 @@
 package org.apache.flink.client.deployment.executors;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.dag.Pipeline;
-import org.apache.flink.client.ClientUtils;
-import org.apache.flink.client.FlinkPipelineTranslationUtil;
-import org.apache.flink.client.cli.ExecutionConfigAccessor;
+import org.apache.flink.client.deployment.AbstractSessionClusterExecutor;
 import org.apache.flink.client.deployment.StandaloneClientFactory;
-import org.apache.flink.client.deployment.StandaloneClusterDescriptor;
 import org.apache.flink.client.deployment.StandaloneClusterId;
-import org.apache.flink.client.program.rest.RestClusterClient;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.execution.Executor;
-import org.apache.flink.core.execution.JobClient;
-import org.apache.flink.runtime.jobgraph.JobGraph;
-
-import java.net.URL;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static org.apache.flink.util.Preconditions.checkNotNull;
-import static org.apache.flink.util.Preconditions.checkState;
 
 /**
  * The {@link Executor} to be used when executing a job on an already running cluster.
  */
 @Internal
-public class StandaloneSessionClusterExecutor implements Executor {
+public class StandaloneSessionClusterExecutor extends AbstractSessionClusterExecutor<StandaloneClusterId, StandaloneClientFactory> {
 
 	public static final String NAME = "standalone-session-cluster";
 
-	private final StandaloneClientFactory clusterClientFactory;
-
 	public StandaloneSessionClusterExecutor() {
-		this.clusterClientFactory = new StandaloneClientFactory();
-	}
-
-	@Override
-	public CompletableFuture<JobClient> execute(final Pipeline pipeline, final Configuration configuration) throws Exception {
-		final ExecutionConfigAccessor configAccessor = ExecutionConfigAccessor.fromConfiguration(configuration);
-
-		final List<URL> dependencies = configAccessor.getJars();
-		final List<URL> classpaths = configAccessor.getClasspaths();
-
-		final JobGraph jobGraph = getJobGraph(pipeline, configuration, classpaths, dependencies);
-
-		try (final StandaloneClusterDescriptor clusterDescriptor = clusterClientFactory.createClusterDescriptor(configuration)) {
-			final StandaloneClusterId clusterID = clusterClientFactory.getClusterId(configuration);
-			checkState(clusterID != null);
-
-			final RestClusterClient<StandaloneClusterId> clusterClient = clusterDescriptor.retrieve(clusterID);
-			return ClientUtils.submitJobAndGetJobClient(clusterClient, jobGraph);
-		}
-	}
-
-	private JobGraph getJobGraph(
-			final Pipeline pipeline,
-			final Configuration configuration,
-			final List<URL> classpaths,
-			final List<URL> libraries) {
-
-		checkNotNull(pipeline);
-		checkNotNull(configuration);
-		checkNotNull(classpaths);
-		checkNotNull(libraries);
-
-		final ExecutionConfigAccessor executionConfigAccessor = ExecutionConfigAccessor.fromConfiguration(configuration);
-		final JobGraph jobGraph = FlinkPipelineTranslationUtil
-				.getJobGraph(pipeline, configuration, executionConfigAccessor.getParallelism());
-
-		jobGraph.addJars(libraries);
-		jobGraph.setClasspaths(classpaths);
-		jobGraph.setSavepointRestoreSettings(executionConfigAccessor.getSavepointRestoreSettings());
-
-		return jobGraph;
+		super(new StandaloneClientFactory());
 	}
 }
