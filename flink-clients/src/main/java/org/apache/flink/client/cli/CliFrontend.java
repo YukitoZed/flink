@@ -669,7 +669,7 @@ public class CliFrontend {
 
 		logAndSysout("Starting execution of program");
 
-		final ExecutorServiceLoader executorServiceLoader = new DefaultExecutorServiceLoader();
+		final ExecutorServiceLoader executorServiceLoader = DefaultExecutorServiceLoader.INSTANCE;
 		final JobSubmissionResult result = ClientUtils.executeProgram(executorServiceLoader, configuration, program);
 
 		if (result.isJobExecutionResult()) {
